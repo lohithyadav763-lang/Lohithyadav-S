@@ -5,6 +5,8 @@ import RouteCard from './components/RouteCard';
 import CustomMap from './components/CustomMap';
 import { getOptimizedRoutes } from './utils/routeOptimizer';
 
+import { AMENITY_MAP } from './utils/poiFetcher';
+
 function App() {
   const [routes, setRoutes] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -83,17 +85,13 @@ function App() {
                 <div className="amenities-container">
                   <h3 className="amenities-title">Find En Route:</h3>
                   <div className="amenities-buttons">
-                    {['Dhabas & Restaurants', 'Hotels', 'Petrol Bunks', 'Railway Stations'].map((amenity) => (
+                    {Object.keys(AMENITY_MAP).map((amenity) => (
                       <button
                         key={amenity}
                         className={`amenity-btn ${amenityFilter === amenity ? 'active' : ''}`}
                         onClick={() => setAmenityFilter(amenityFilter === amenity ? '' : amenity)}
                       >
-                        {amenity === 'Dhabas & Restaurants' && '🍽️ '}
-                        {amenity === 'Hotels' && '🏨 '}
-                        {amenity === 'Petrol Bunks' && '⛽ '}
-                        {amenity === 'Railway Stations' && '🚉 '}
-                        {amenity}
+                        {AMENITY_MAP[amenity].icon} {amenity}
                       </button>
                     ))}
                   </div>

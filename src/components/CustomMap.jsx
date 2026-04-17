@@ -22,7 +22,11 @@ export default function NaturalMap({ originCoords, destCoords, routes, amenityFi
   const leafletMap = useRef(null);
   const routeLayersRef = useRef([]);
   const poiLayersRef = useRef([]);
+  const tileLayerRef = useRef(null);
+  const labelLayerRef = useRef(null);
+  
   const [loadingPOIs, setLoadingPOIs] = useState(false);
+  const [mapStyle, setMapStyle] = useState('satellite');
 
   // Initialize map once
   useEffect(() => {
@@ -33,12 +37,6 @@ export default function NaturalMap({ originCoords, destCoords, routes, amenityFi
       zoomControl: true,
     });
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; OpenStreetMap &copy; CARTO',
-      subdomains: 'abcd',
-      maxZoom: 19,
-    }).addTo(leafletMap.current);
-
     return () => {
       if (leafletMap.current) {
         leafletMap.current.remove();
@@ -46,6 +44,35 @@ export default function NaturalMap({ originCoords, destCoords, routes, amenityFi
       }
     };
   }, []);
+
+  // Manage tile layers based on mapStyle
+  useEffect(() => {
+    if (!leafletMap.current) return;
+
+    // Clear existing tile/label layers
+    if (tileLayerRef.current) tileLayerRef.current.remove();
+    if (labelLayerRef.current) labelLayerRef.current.remove();
+
+    if (mapStyle === 'dark') {
+      tileLayerRef.current = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap &copy; CARTO',
+        subdomains: 'abcd',
+        maxZoom: 19,
+      }).addTo(leafletMap.current);
+    } else {
+      // Satellite imagery from Esri
+      tileLayerRef.current = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+      }).addTo(leafletMap.current);
+
+      // Add hybrid labels on top
+      labelLayerRef.current = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
+        subdomains: 'abcd',
+        maxZoom: 19,
+        zIndex: 10,
+      }).addTo(leafletMap.current);
+    }
+  }, [mapStyle]);
 
   // Draw routes when data changes
   useEffect(() => {
@@ -120,7 +147,7 @@ export default function NaturalMap({ originCoords, destCoords, routes, amenityFi
     const loadPOIs = async () => {
       setLoadingPOIs(true);
       try {
-        const pois = await fetchPOIsAlongRoute(amenityFilter, originCoords, destCoords);
+        const pois = await fetchPOIsAlongRoute(amenityFilter, originCoords, destCoords, routes[0]?.polyline);
         const config = AMENITY_MAP[amenityFilter];
 
         pois.forEach(poi => {
@@ -153,13 +180,21 @@ export default function NaturalMap({ originCoords, destCoords, routes, amenityFi
     };
 
     loadPOIs();
-  }, [amenityFilter, originCoords, destCoords]);
+  }, [amenityFilter, originCoords, destCoords, routes]);
 
   return (
     <div className="natural-map-wrapper">
       <div className="map-topbar">
         <div className="map-status-dot"></div>
         <span>LIVE ROUTE MAP</span>
+        
+        <button 
+          className="theme-toggle-btn"
+          onClick={() => setMapStyle(mapStyle === 'dark' ? 'satellite' : 'dark')}
+          title="Toggle Map Style"
+        >
+          {mapStyle === 'dark' ? '🛰️ Satellite' : '🌃 Dark View'}
+        </button>
         {loadingPOIs && <span className="poi-loading">Loading {amenityFilter}…</span>}
         <div className="map-legend">
           <span className="legend-dot fastest"></span> Fastest
